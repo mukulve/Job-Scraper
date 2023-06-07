@@ -1,1 +1,1 @@
-# Job-Scraper![Job Scraper](https://github.com/mukulve/Job-Scraper/assets/97366719/a865fbab-0226-4a7b-8aab-59da454b05b3)
+![Screenshot from 2023-06-07 13-46-22](https://github.com/mukulve/Job-Scraper/assets/97366719/45b3a404-8836-4fb7-9f3b-4ecb4aa11094)
