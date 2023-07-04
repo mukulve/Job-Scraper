@@ -1,5 +1,4 @@
 # web scraping
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
@@ -31,14 +30,10 @@ inputJobLocation = input()
 
 async def scrapeJobDescription(url):
     global df
-
     driver = DriverOptions()
-
     driver.get(url)
-
     html = driver.page_source
     soup = BeautifulSoup(html, "html.parser")
-
     try:
         jobDescription = soup.find(
             "div", class_="show-more-less-html__markup"
@@ -52,7 +47,6 @@ def DriverOptions():
     options = Options()
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--headless=new")
-
     driver = webdriver.Chrome(options=options)
     return driver
 
@@ -61,12 +55,10 @@ async def scrapeLinkedin():
     global df
     global inputJobTitle
     global inputJobLocation
-
     driver = DriverOptions()
-
     counter = 0
     pageCounter = 1
-
+    
     while True:
         try:
             driver.get(
