@@ -1,14 +1,18 @@
 from playwright.sync_api import sync_playwright
 from time import sleep
+from rich.console import Console
+from rich.table import Table
 
 '''
 pip install playwright  
 playwright install 
+pip install rich
 '''
 
 jobTitle = input("Job Title : ")
 jobLocation = input("Job Location : ")
 counter = 0
+console = Console()
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
@@ -22,8 +26,15 @@ with sync_playwright() as p:
 
         job_card = page.locator("li").all()
         
+        table = Table(title=f"{jobTitle} jobs in {jobLocation}")
+        table.add_column("Title")
+        table.add_column("Location")
+        table.add_column("Company")
+        table.add_column("Url")
+
         #loop over each possible card
         for card in job_card:
+
             title = card.locator(".base-search-card__title")
             location = card.locator(".job-search-card__location")
             company = card.locator(".base-search-card__subtitle a")
@@ -36,8 +47,10 @@ with sync_playwright() as p:
                 company = company.first.inner_html().strip()  
                 link = link.get_attribute("href")
 
-                print(f"{title} {location} {company} {link}")
+                table.add_row(title, location, company, link)
             
+        console.print(table)
+
         continueScraping = input("Continue to next page (y/n)")
         if continueScraping.strip() == "y":
             counter += 25
