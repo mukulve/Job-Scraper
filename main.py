@@ -1,151 +1,51 @@
-# web scraping
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from playwright.sync_api import sync_playwright
+from time import sleep
 
-# html parsing
-from bs4 import BeautifulSoup
+'''
+pip install playwright  
+playwright install 
+'''
 
-# dataframes
-import pandas as pd
+jobTitle = input("Job Title : ")
+jobLocation = input("Job Location : ")
+counter = 0
 
-# async
-import asyncio
-
-# terminal formatting
-from rich.progress import track
-from rich.console import Console
-from rich.table import Table
-
-# instantiate global variables
-df = pd.DataFrame(columns=["Title", "Location", "Company", "Link", "Description"])
-console = Console()
-table = Table(show_header=True, header_style="bold")
-
-# get user input
-console.print("Enter Job Title :", style="bold green", end=" ")
-inputJobTitle = input()
-console.print("Enter Job Location :", style="bold green", end=" ")
-inputJobLocation = input()
-
-
-async def scrapeJobDescription(url):
-    global df
-    driver = DriverOptions()
-    driver.get(url)
-    html = driver.page_source
-    soup = BeautifulSoup(html, "html.parser")
-    try:
-        jobDescription = soup.find(
-            "div", class_="show-more-less-html__markup"
-        ).text.strip()
-        return jobDescription
-    except:
-        return ""
-
-
-def DriverOptions():
-    options = Options()
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--headless=new")
-    driver = webdriver.Chrome(options=options)
-    return driver
-
-
-async def scrapeLinkedin():
-    global df
-    global inputJobTitle
-    global inputJobLocation
-    driver = DriverOptions()
-    counter = 0
-    pageCounter = 1
-    
+with sync_playwright() as p:
+    browser = p.chromium.launch()
     while True:
-        try:
-            driver.get(
-                f"https://www.linkedin.com/jobs/search/?&keywords={inputJobTitle}&location={inputJobLocation}&refresh=true&start={counter}"
-            )
+        page = browser.new_page()
+        url = f"https://www.linkedin.com/jobs/search/?&keywords={jobTitle}&location={jobLocation}&refresh=true&start={counter}"
+        page.goto(url)
 
-            html = driver.page_source
-            soup = BeautifulSoup(html, "html.parser")
+        #wait for the job list to appear
+        page.wait_for_selector(".jobs-search__results-list")
 
-            ulElement = soup.find("ul", class_="jobs-search__results-list")
-            liElements = ulElement.find_all("li")
+        job_card = page.locator("li").all()
+        
+        #loop over each possible card
+        for card in job_card:
+            title = card.locator(".base-search-card__title")
+            location = card.locator(".job-search-card__location")
+            company = card.locator(".base-search-card__subtitle a")
+            link = card.locator(".base-card__full-link")
 
-            for item in track(
-                liElements, description=f"Linkedin - Page: {pageCounter}"
-            ):
-                jobTitle = item.find(
-                    "h3", class_="base-search-card__title"
-                ).text.strip()
-                jobLocation = item.find(
-                    "span", class_="job-search-card__location"
-                ).text.strip()
-                jobCompany = item.find(
-                    "h4", class_="base-search-card__subtitle"
-                ).text.strip()
-                jobLink = item.find_all("a")[0]["href"]
+            #if data is there then use it 
+            if title.count() > 0 and location.count() > 0 and company.count() > 0 and link.count() > 0 :
+                title = title.first.inner_html().strip()  
+                location = location.first.inner_html().strip()  
+                company = company.first.inner_html().strip()  
+                link = link.get_attribute("href")
 
-                jobDescription = await scrapeJobDescription(jobLink)
-
-                if jobTitle and jobLocation and jobCompany and jobLink:
-                    df = pd.concat(
-                        [
-                            df,
-                            pd.DataFrame(
-                                {
-                                    "Title": [jobTitle],
-                                    "Location": [jobLocation],
-                                    "Company": [jobCompany],
-                                    "Link": [jobLink],
-                                    "Description": [jobDescription],
-                                }
-                            ),
-                        ]
-                    )
-
-            console.print("Scrape Next Page? (y/n) :", style="bold yellow", end=" ")
-            continueInput = input()
-
-            if continueInput == "n":
-                break
-
+                print(f"{title} {location} {company} {link}")
+            
+        continueScraping = input("Continue to next page (y/n)")
+        if continueScraping.strip() == "y":
             counter += 25
-            pageCounter += 1
-
-        except:
+            #close page since we are done with it 
+            page.close()
+            #sleep before moving to next page to seem less sus
+            sleep(3)
+        else:
             break
 
-    driver.quit()
-
-
-async def main():
-    await scrapeLinkedin()
-
-    # create table
-    table.add_column("Title")
-    table.add_column("Company")
-    table.add_column("Location")
-    table.add_column("Link")
-    table.add_column("Description")
-    # loop over dataframe and print rich table
-    for index, row in df.iterrows():
-        table.add_row(
-            f"{row['Title']}",
-            f"{row['Company']}",
-            f"{row['Location']}",
-            f"{row['Link']}",
-            f"{(row['Description'])[:20]}...",
-        )
-
-    console.print(table)
-
-    console.print("Save results locally? (y/n) :", style="bold yellow", end=" ")
-    continueInput = input()
-
-    if continueInput == "y":
-        df.to_csv(f"{inputJobTitle}_{inputJobLocation}_jobs.csv", index=False)
-
-
-if __name__ == "__main__":
-    # run main function
-    asyncio.run(main())
+    browser.close()
