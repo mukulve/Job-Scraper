@@ -1,0 +1,46 @@
+name: Update Job Listings
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_title:
+        description: "Job title to search"
+        required: true
+      job_location:
+        description: "Job location"
+        required: true
+
+permissions:
+  contents: write  
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install --with-deps
+
+      - name: Run scraper
+        env:
+          JOB_TITLE: ${{ github.event.inputs.job_title }}
+          JOB_LOCATION: ${{ github.event.inputs.job_location }}
+        run: |
+          python scrape.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update README with latest ${JOB_TITLE} jobs in ${JOB_LOCATION}" || echo "No changes to commit"
+          git push
