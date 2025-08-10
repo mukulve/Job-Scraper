@@ -35,7 +35,7 @@ jobs:
           JOB_TITLE: ${{ github.event.inputs.job_title }}
           JOB_LOCATION: ${{ github.event.inputs.job_location }}
         run: |
-          python scrape.py
+          python main.py
 
       - name: Commit and push changes
         run: |
